@@ -1,4 +1,4 @@
-require 'tests/issue_extension.rb'
+require 'deals/issue_extension.rb'
 
 Redmine::Plugin.register :basecrm do
   name 'Basecrm plugin'
@@ -8,9 +8,9 @@ Redmine::Plugin.register :basecrm do
   url 'http://1000i.pl'
   author_url 'http://1000i.pl'
 
-  menu :top_menu, :basecrm, {controller: :tests, action: :show}, caption: :basecrm
+  menu :top_menu, :basecrm, {controller: :deals, action: :show}, caption: :basecrm
 
   project_module :basecrm do
-    permission :tests, {tests: :show}
+    permission :deals, {deals: :show}
   end
 end

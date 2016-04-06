@@ -1,1 +1,1 @@
-resource :tests, only: [:show]
+resource :deals, only: [:show]
