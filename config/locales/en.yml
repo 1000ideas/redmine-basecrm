@@ -1,0 +1,5 @@
+# English strings go here for Rails i18n
+en:
+  basecrm: "Test"
+  other_issues: "Other issues that are assigned to You"
+

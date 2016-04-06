@@ -1,0 +1,1 @@
+resource :tests, only: [:show]
