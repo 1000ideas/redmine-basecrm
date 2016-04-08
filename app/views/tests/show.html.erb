@@ -1,6 +1,0 @@
-<h2>Twoje zadania</h2>
-<% @my_issues.each do |issue| %>
-  <li><%= "#{issue.subject} -- #{issue.priority.name}" %></li>
-<% end %>
-
-<h3><%= @my_issues.first.create_new_ticket %></h3>
