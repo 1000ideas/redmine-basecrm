@@ -33,7 +33,7 @@ module IssueBasecrmExtension
         project: Project.first,
         subject: deal.name,
         description: '',
-        author: User.find(1)
+        author: User.current
       )
 
       if issue.save
