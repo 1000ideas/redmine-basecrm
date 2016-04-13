@@ -1,4 +1,5 @@
 include ActionView::Helpers::TextHelper
+require 'basecrm'
 
 class DealsController < ApplicationController
   unloadable
