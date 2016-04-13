@@ -6,7 +6,7 @@ class Deal < ActiveRecord::Base
   def self.check_if_new_exists
     client = BaseCRM::Client.new(access_token:
       '5dd38d5b675c56f9651b42ff66dde2d74971d0490c6af94aa66cf3e87b47b801')
-    sync = BaseCRM::Sync.new(client: client, device_uuid: 'my_uuid90')
+    sync = BaseCRM::Sync.new(client: client, device_uuid: 'my_uuid93')
 
     resources = []
     deals = []
@@ -35,11 +35,7 @@ class Deal < ActiveRecord::Base
       assigned_to_id: Deal.assign_to(Deal.user_name(deal.owner_id, resources))
     )
 
-    if issue.save
-      return true
-    else
-      return false
-    end
+    issue.save ? true : false
   end
 
   def self.description(deal, resources)
@@ -47,25 +43,25 @@ class Deal < ActiveRecord::Base
 
     link = "https://app.futuresimple.com/sales/deals/#{deal.id}"
 
-    items << "#{l(:contact_name)}: #{Deal.contact_name(deal.contact_id, resources)}".force_encoding('utf-8') unless deal.contact_id.nil?
-    items << "#{l(:organization_name)}: #{Deal.contact_name(deal.organization_id, resources, true)}".force_encoding('utf-8') unless deal.organization_id.nil?
-    items << "#{l(:user_name)}: #{Deal.user_name(deal.owner_id, resources)}".force_encoding('utf-8')
+    items << "#{l(:contact_name)}: #{Deal.contact_name(deal.contact_id, resources)}" unless deal.contact_id.nil?
+    items << "#{l(:organization_name)}: #{Deal.contact_name(deal.organization_id, resources, true)}" unless deal.organization_id.nil?
+    items << "#{l(:user_name)}: #{Deal.user_name(deal.owner_id, resources)}"
     items << "#{l(:scope)}: #{deal.value} #{deal.currency}"
     items << "#{l(:link_to_base)}: #{link}"
 
-    items.join('<br>')
+    items.join("\n\n")
   end
 
   def self.contact_name(id, resources, organization = false)
     resources.each do |resource|
-      return resource.name.force_encoding('utf-8') if resource.id == id &&
-        resource.is_organization == organization
+      return resource.name if resource.id == id &&
+                              resource.is_organization == organization
     end
   end
 
   def self.user_name(id, resources)
     resources.each do |resource|
-      return resource.name.force_encoding('utf-8') if resource.id == id
+      return resource.name if resource.id == id
     end
   end
 
