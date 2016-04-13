@@ -1,5 +1,12 @@
 # English strings go here for Rails i18n
 en:
-  basecrm: "Deals"
-  other_issues: "Other issues that are assigned to You"
+  top_menu_deals: "Deals"
+  tickets_created: "Number of tickets that were created from BaseCRM deals"
+  tracker: "Tracker"
+  project: "Project"
+  contact_name: "Contact name"
+  organization_name: "Company name"
+  user_name: "User name"
+  scope: "Scope"
+  link_to_base: "Link"
 

@@ -1,0 +1,20 @@
+<% trackers_list = Tracker.all %>
+<% projects_list = Project.all %>
+
+<table class="basecrm-plugin">
+  <tbody>
+    <tr class="basecrm-tracker">
+      <th><%= l(:tracker) %></th>
+      <td>
+        <%= select_tag "settings[tracker_id]", options_from_collection_for_select(trackers_list, :id, :name, settings[:tracker_id]) %>
+      </td>
+    </tr>
+    <tr class="basecrm-project">
+      <th><%= l(:project) %></th>
+      <td>
+        <%= select_tag "settings[project_id]", options_from_collection_for_select(projects_list, :id, :name, settings[:project_id]) %>
+      </td>
+    </tr>
+  </tbody>
+</table>
+

@@ -1,3 +1,10 @@
 pl:
-  basecrm: "Umowy"
-  other_issues: "Inne zadania, które zostały do zostały do Ciebie przydzielone"
+  top_menu_deals: "Umowy"
+  tickets_created: "Liczba zadań stworzonych z umów BaseCRM"
+  tracker: "Typ zagadnienia"
+  project: "Projekt"
+  contact_name: "Nazwa kontaktu"
+  organization_name: "Nazwa firmy"
+  user_name: "Nazwa użytkownika"
+  scope: "Wartość"
+  link_to_base: "Link"
