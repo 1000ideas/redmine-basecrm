@@ -10,6 +10,6 @@ en:
   project: "Project"
   base_token: "My BaseCRM's Token"
   device_uuid: "My device's UUID"
-  client_error: "Error. Please check your BaseCRM Token"
-  sync_error: "Error. Please check your device UUID"
+  client_error: "Couldn't connect to BaseCRM. Please check your BaseCRM Token"
+  sync_error: "Couldn't connect to BaseCRM. Please check your device UUID"
 
