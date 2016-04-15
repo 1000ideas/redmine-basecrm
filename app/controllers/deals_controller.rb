@@ -10,10 +10,12 @@ class DealsController < ApplicationController
   accept_api_auth :check_for_new_deals
 
   def check_for_new_deals
-    options = Deal.check_if_new_exists
+    options = Deal.connect_to_base
     successes = []
 
-    if options[:deals].any?
+    if options.include? :error
+      redirect_to home_path, error: options[:error] and return
+    elsif options[:deals].any?
       options[:deals].each do |deal|
         successes.push(Deal.create_new_ticket(deal, options[:resources]))
       end

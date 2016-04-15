@@ -15,6 +15,18 @@
         <%= select_tag "settings[project_id]", options_from_collection_for_select(projects_list, :id, :name, settings[:project_id]) %>
       </td>
     </tr>
+    <tr class="basecrm-token">
+      <th><%= l(:base_token) %></th>
+      <td>
+        <%= text_field_tag "settings[base_token]", settings[:base_token], size: 30 %>
+      </td>
+    </tr>
+    <tr class="basecrm-device-uuid">
+      <th><%= l(:device_uuid) %></th>
+      <td>
+        <%= text_field_tag "settings[device_uuid]", settings[:device_uuid], size: 30 %>
+      </td>
+    </tr>
   </tbody>
 </table>
 

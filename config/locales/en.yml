@@ -1,12 +1,15 @@
 # English strings go here for Rails i18n
 en:
-  top_menu_deals: "Deals"
   tickets_created: "Number of tickets that were created from BaseCRM deals"
-  tracker: "Tracker"
-  project: "Project"
   contact_name: "Contact name"
   organization_name: "Company name"
   user_name: "User name"
   scope: "Scope"
   link_to_base: "Link"
+  tracker: "Tracker"
+  project: "Project"
+  base_token: "My BaseCRM's Token"
+  device_uuid: "My device's UUID"
+  client_error: "Error. Please check your BaseCRM Token"
+  sync_error: "Error. Please check your device UUID"
 
