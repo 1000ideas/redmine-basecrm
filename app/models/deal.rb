@@ -3,11 +3,25 @@ class Deal < ActiveRecord::Base
 
   BASE_TYPES = %w(user contact).freeze
 
-  def self.check_if_new_exists
-    client = BaseCRM::Client.new(access_token:
-      '5dd38d5b675c56f9651b42ff66dde2d74971d0490c6af94aa66cf3e87b47b801')
-    sync = BaseCRM::Sync.new(client: client, device_uuid: 'my_uuid93')
+  def self.connect_to_base
+    begin
+      client = BaseCRM::Client.new(access_token:
+        Setting.plugin_basecrm[:base_token])
+    rescue
+      return { error: l(:client_error) }
+    end
+    # '5dd38d5b675c56f9651b42ff66dde2d74971d0490c6af94aa66cf3e87b47b801')
+    begin
+      sync = BaseCRM::Sync.new(client: client,
+                               device_uuid: Setting.plugin_basecrm[:device_uuid])
+    rescue
+      return { error: l(:sync_error) }
+    end
 
+    Deal.sync_data(sync)
+  end
+
+  def self.sync_data(sync)
     resources = []
     deals = []
 
