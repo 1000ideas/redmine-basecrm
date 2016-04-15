@@ -1,5 +1,4 @@
 pl:
-  tickets_created: "Liczba zadań stworzonych z umów BaseCRM"
   contact_name: "Nazwa kontaktu"
   organization_name: "Nazwa firmy"
   user_name: "Nazwa użytkownika"
@@ -9,5 +8,5 @@ pl:
   project: "Projekt"
   base_token: "Mój BaseCRM Token"
   device_uuid: "UUID mojego urządzenia"
-  client_error: "Błąd. Proszę, sprawdź swój token BaseCRM"
-  sync_error: "Błąd. Proszę, sprawdź UUID swojego urządzenia"
+  client_error: "Nie można połączyć się z BaseCRM. Proszę, sprawdź swój token BaseCRM"
+  sync_error: "Nie można połączyć się z BaseCRM. Proszę, sprawdź UUID swojego urządzenia"

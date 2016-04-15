@@ -1,5 +1,5 @@
 Redmine::Plugin.register :basecrm do
-  name 'Basecrm plugin'
+  name 'BaseCRM plugin'
   author '1000ideas'
   description 'Get your deals from BaseCRM as soon as they appear'
   version '0.0.1'

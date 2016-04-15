@@ -14,14 +14,13 @@ class DealsController < ApplicationController
     successes = []
 
     if options.include? :error
-      redirect_to home_path, error: options[:error] and return
+      redirect_to(home_path, { flash: { error: options[:error] } }) and return
     elsif options[:deals].any?
       options[:deals].each do |deal|
-        successes.push(Deal.create_new_ticket(deal, options[:resources]))
+        Deal.create_new_ticket(deal, options[:resources])
       end
     end
 
-    redirect_to home_path, notice:
-      "#{l(:tickets_created)}: #{successes.count(true)}"
+    redirect_to home_path
   end
 end
