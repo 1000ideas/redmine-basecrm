@@ -10,7 +10,7 @@ class Deal < ActiveRecord::Base
     rescue
       return { error: l(:client_error) }
     end
-    # '5dd38d5b675c56f9651b42ff66dde2d74971d0490c6af94aa66cf3e87b47b801')
+
     begin
       sync = BaseCRM::Sync.new(client: client,
                                device_uuid: Setting.plugin_basecrm[:device_uuid])
@@ -45,7 +45,7 @@ class Deal < ActiveRecord::Base
       priority: Enumeration.where(name: 'Normal', type: 'IssuePriority').first,
       subject: "DID: #{deal.id} - #{deal.name}",
       description: Deal.description(deal, resources),
-      author: User.find(1),
+      author: User.current,
       assigned_to_id: Deal.assign_to(Deal.user_name(deal.owner_id, resources))
     )
 
