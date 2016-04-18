@@ -1,5 +1,6 @@
 <% trackers_list = Tracker.all %>
 <% projects_list = Project.all %>
+<% categories_list = IssueCategory.where(project_id: settings[:project_id]) %>
 
 <table class="basecrm-plugin">
   <tbody>
@@ -15,10 +16,16 @@
         <%= select_tag "settings[project_id]", options_from_collection_for_select(projects_list, :id, :name, settings[:project_id]) %>
       </td>
     </tr>
+    <tr class="basecrm-category">
+      <th><%= l(:category) %></th>
+      <td>
+        <%= select_tag "settings[category_id]", options_from_collection_for_select(categories_list, :id, :name, settings[:category_id]) %>
+      </td>
+    </tr>
     <tr class="basecrm-html-tags">
       <th><%= l(:html_tags) %></th>
       <td>
-        <%= check_box_tag "settings[html_tags]", 'settings[html_tags]', settings[:html_tags] %>
+        <%= check_box_tag "settings[html_tags]", 'setting[html_tags]', settings[:html_tags] %>
       </td>
     </tr>
     <tr class="basecrm-token">
