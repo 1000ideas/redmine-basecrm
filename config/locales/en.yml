@@ -1,0 +1,15 @@
+# English strings go here for Rails i18n
+en:
+  contact_name: "Contact name"
+  organization_name: "Company name"
+  user_name: "User name"
+  scope: "Scope"
+  link_to_base: "Link"
+  tracker: "Tracker"
+  project: "Project"
+  category: "Category"
+  base_token: "My BaseCRM's Token"
+  device_uuid: "My device's UUID"
+  client_error: "Couldn't connect to BaseCRM. Please check your BaseCRM Token"
+  sync_error: "Couldn't connect to BaseCRM. Please check your device UUID"
+
