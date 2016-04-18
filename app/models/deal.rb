@@ -66,7 +66,7 @@ class Deal < ActiveRecord::Base
     items << "Scope: #{deal.value} #{deal.currency}"
     items << "Link: #{link}"
 
-    items.join("\r\n")
+    Setting.plugin_basecrm[:html_tags] ? items.join("<br />") : items.join("\r\n")
   end
 
   def self.contact_name(id, resources, organization = false)

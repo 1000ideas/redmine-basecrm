@@ -6,6 +6,7 @@ pl:
   link_to_base: "Link"
   tracker: "Typ zagadnienia"
   project: "Projekt"
+  html_tags: "Opisy i komentarze HTML"
   base_token: "Mój BaseCRM Token"
   device_uuid: "UUID mojego urządzenia"
   client_error: "Nie można połączyć się z BaseCRM. Proszę, sprawdź swój token BaseCRM"

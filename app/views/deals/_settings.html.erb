@@ -15,6 +15,12 @@
         <%= select_tag "settings[project_id]", options_from_collection_for_select(projects_list, :id, :name, settings[:project_id]) %>
       </td>
     </tr>
+    <tr class="basecrm-html-tags">
+      <th><%= l(:html_tags) %></th>
+      <td>
+        <%= check_box_tag "settings[html_tags]", 'settings[html_tags]', settings[:html_tags] %>
+      </td>
+    </tr>
     <tr class="basecrm-token">
       <th><%= l(:base_token) %></th>
       <td>

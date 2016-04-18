@@ -8,6 +8,7 @@ Redmine::Plugin.register :basecrm do
 
   settings default: { 'tracker_id' => Tracker.first.id,
                       'project_id' => Project.first.id,
+                      'html_tags' => true,
                       'base_token' => "",
                       'device_uuid' => "" },
            partial: 'deals/settings'
