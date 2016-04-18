@@ -5,15 +5,18 @@ class Deal < ActiveRecord::Base
 
   def self.connect_to_base
     begin
-      client = BaseCRM::Client.new(access_token:
-        Setting.plugin_basecrm[:base_token])
+      client = BaseCRM::Client.new(
+        access_token: Setting.plugin_basecrm[:base_token]
+      )
     rescue
       return { error: l(:client_error) }
     end
 
     begin
-      sync = BaseCRM::Sync.new(client: client,
-                               device_uuid: Setting.plugin_basecrm[:device_uuid])
+      sync = BaseCRM::Sync.new(
+        client: client,
+        device_uuid: Setting.plugin_basecrm[:device_uuid]
+      )
     rescue
       return { error: l(:sync_error) }
     end
@@ -42,14 +45,14 @@ class Deal < ActiveRecord::Base
     issue = Issue.new(
       tracker_id: Setting.plugin_basecrm[:tracker_id],
       project_id: Setting.plugin_basecrm[:project_id],
-      priority: Enumeration.where(name: 'Normal', type: 'IssuePriority').first,
+      priority: IssuePriority.find_by_position_name('default'),
       subject: "DID: #{deal.id} - #{deal.name}",
       description: Deal.description(deal, resources),
       author: User.current,
       assigned_to_id: Deal.assign_to(Deal.user_name(deal.owner_id, resources))
     )
 
-    issue.save ? true : false
+    issue.save
   end
 
   def self.description(deal, resources)
@@ -57,13 +60,13 @@ class Deal < ActiveRecord::Base
 
     link = "https://app.futuresimple.com/sales/deals/#{deal.id}"
 
-    items << "#{l(:contact_name)}: #{Deal.contact_name(deal.contact_id, resources)}" unless deal.contact_id.nil?
-    items << "#{l(:organization_name)}: #{Deal.contact_name(deal.organization_id, resources, true)}" unless deal.organization_id.nil?
-    items << "#{l(:user_name)}: #{Deal.user_name(deal.owner_id, resources)}"
-    items << "#{l(:scope)}: #{deal.value} #{deal.currency}"
-    items << "#{l(:link_to_base)}: #{link}"
+    items << "Contact Name: #{Deal.contact_name(deal.contact_id, resources)}" unless deal.contact_id.nil?
+    items << "Comapny Name: #{Deal.contact_name(deal.organization_id, resources, true)}" unless deal.organization_id.nil?
+    items << "User Name: #{Deal.user_name(deal.owner_id, resources)}"
+    items << "Scope: #{deal.value} #{deal.currency}"
+    items << "Link: #{link}"
 
-    items.join("\n\n")
+    items.join("\r\n")
   end
 
   def self.contact_name(id, resources, organization = false)
