@@ -11,7 +11,7 @@ class Deal < ActiveRecord::Base
     rescue
       return { error: l(:client_error) }
     end
-    # '5dd38d5b675c56f9651b42ff66dde2d74971d0490c6af94aa66cf3e87b47b801')
+
     begin
       sync = BaseCRM::Sync.new(
         client: client,
@@ -93,19 +93,13 @@ class Deal < ActiveRecord::Base
 
     link = "https://app.futuresimple.com/sales/deals/#{deal.id}"
 
-    # items << "#{l(:contact_name)}: #{Deal.contact_name(deal.contact_id, resources)}" unless deal.contact_id.nil?
-    # items << "#{l(:organization_name)}: #{Deal.contact_name(deal.organization_id, resources)}" unless deal.organization_id.nil?
-    # items << "#{l(:user_name)}: #{Deal.user_name(deal.owner_id, resources)}"
-    # items << "#{l(:scope)}: #{deal.value} #{deal.currency}"
-    # items << "#{l(:link_to_base)}: #{link}"
-
     items << "Contact Name: #{Deal.contact_name(deal.contact_id, resources)}" unless deal.contact_id.nil?
     items << "Company Name: #{Deal.contact_name(deal.organization_id, resources)}" unless deal.organization_id.nil?
     items << "User name: #{Deal.user_name(deal.owner_id, resources)}"
     items << "Scope: #{deal.value} #{deal.currency}"
     items << "Link: #{link}"
 
-    items.join("\n\n")
+    items.join("\r\n")
   end
 
   def self.contact_name(id, resources)
