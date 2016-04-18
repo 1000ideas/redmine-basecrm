@@ -1,8 +1,0 @@
-<h2>Twoje zadania</h2>
-<% @my_issues.each do |issue| %>
-  <li><%= "#{issue.subject} -- #{issue.priority.name}" %></li>
-<% end %>
-
-<h3>Deals from BaseCRM</h3>
-
- Created <%= pluralize(@successes.count, 'deal') %>
