@@ -16,7 +16,7 @@ class DealsController < ApplicationController
       redirect_to(home_path, flash: { error: options[:error] }) and return
     elsif options[:deals].any?
       options[:deals].each do |deal|
-        Deal.create_or_update_ticket(deal, options[:resources])
+        Deal.create_or_update_issue(deal, options)
       end
     end
 

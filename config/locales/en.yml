@@ -8,6 +8,7 @@ en:
   tracker: "Tracker"
   project: "Project"
   category: "Category"
+  html_tags: "Description and comments HTML"
   base_token: "My BaseCRM's Token"
   device_uuid: "My device's UUID"
   client_error: "Couldn't connect to BaseCRM. Please check your BaseCRM Token"
