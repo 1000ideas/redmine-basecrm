@@ -63,7 +63,8 @@ class Deal < ActiveRecord::Base
     if ticket.present?
       Deal.update_ticket(deal, resources, ticket, notes)
     else
-      Deal.create_ticket(deal, resources)
+      ticket = {}
+      ticket['id'] = Deal.create_ticket(deal, resources)
     end
 
     if deal.stage_id == pipeline['Won']
@@ -80,25 +81,29 @@ class Deal < ActiveRecord::Base
       priority: IssuePriority.find_by_position_name('default'),
       subject: "DID: #{deal.id} - #{deal.name}",
       description: Deal.description(deal, resources),
-      author_id: author_id,
+      author_id: author_id || User.current.id,
       assigned_to_id: author_id
     )
 
-    issue.save
+    if issue.save
+      return issue.id
+    end
   end
 
   def self.update_ticket(deal, resources, ticket, notes)
-    j = Journal.new(
-      journalized_id: ticket['id'],
-      journalized_type: 'Issue',
-      user_id: User.current.id,
-      notes: Deal.note(deal, resources, notes),
-      created_on: deal.created_at
-    )
+    if Deal.find_note(deal.id, notes)
+      j = Journal.new(
+        journalized_id: ticket['id'],
+        journalized_type: 'Issue',
+        user_id: User.current.id,
+        notes: Deal.note(deal, resources, notes),
+        created_on: deal.created_at
+      )
 
-    Issue.find(ticket['id']).touch
+      j.save
 
-    j.save
+      Issue.find(ticket['id']).touch
+    end
   end
 
   def self.description(deal, resources)
