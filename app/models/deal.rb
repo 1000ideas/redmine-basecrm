@@ -28,9 +28,9 @@ class Deal < ActiveRecord::Base
     resources = []
     deals = []
     notes = []
+    sources = {}
     stages = {}
 
-    # TODO: additionally i will need sources
     sync.fetch do |meta, resource|
       case meta.type.to_s
       when 'deal'
@@ -40,6 +40,8 @@ class Deal < ActiveRecord::Base
         resources.push(resource)
       when 'pipeline'
         stages = Deal.pipeline_stages(resource)
+      when 'source'
+        sources[resource.id] = resource.name
       when 'note'
         notes.push(resource)
         meta.sync.ack
@@ -48,13 +50,19 @@ class Deal < ActiveRecord::Base
       end
     end
 
-    { deals: deals, resources: resources, notes: notes, stages: stages }
+    {
+      deals: deals,
+      resources: resources,
+      notes: notes,
+      sources: sources,
+      stages: stages
+    }
   end
 
   def self.pipeline_stages(resource)
     stages = {}
     resource.stages[:items].each do |item|
-      stages[item[:data][:name]] = item[:data][:id]
+      stages[item[:data][:id]] = item[:data][:name]
     end
     stages
   end
@@ -63,66 +71,62 @@ class Deal < ActiveRecord::Base
     issue_id = Deal.find_issue_id(deal)
 
     if issue_id.present?
-      Deal.update_issue(deal, issue_id, options[:resources], options[:notes])
+      Deal.update_issue(deal, issue_id, options)
     else
       issue_id = Deal.create_issue(deal, options[:resources])
     end
 
-    if deal.stage_id == options[:stages]['Won']
+
+    if options[:stages][deal.stage_id] == 'Won'
       Issue.find(issue_id)
            .update_attribute(:category_id, Setting.plugin_basecrm[:category_id])
     end
   end
 
   def self.create_issue(deal, resources)
+    author_id = Deal.assign_to(Deal.user_name(deal.owner_id, resources))
     issue = Issue.new(
       tracker_id: Setting.plugin_basecrm[:tracker_id],
       project_id: Setting.plugin_basecrm[:project_id],
       priority: IssuePriority.find_by_position_name('default'),
       subject: "DID: #{deal.id} - #{deal.name}",
       description: Deal.description(deal, resources),
-      author_id: User.current.id,
-      assigned_to_id: Deal.assign_to(Deal.user_name(deal.owner_id, resources))
+      author_id: author_id || User.current.id,
+      assigned_to_id: author_id
     )
 
-    if issue.save
-      Deal.create_revision(issue.id, deal)
-    end
+    IssueRevision.create_revision(issue.id, deal) if issue.save
 
     issue.id
   end
 
-  def self.update_issue(deal, issue_id, resources, notes)
-    if notes.any?
-      note = Deal.note(deal, resources, notes)
-    else
-      note = Deal.deal_changed(deal, resources, issue_id)
+  def self.update_issue(deal, issue_id, options)
+    deal_notes = Deal.find_notes(deal.id, options[:notes])
+    deal_notes.each do |note|
+      if Deal.create_note(issue_id, note, options[:resources])
+        Issue.find(issue_id).touch
+      end
     end
 
+    diff = IssueRevision.differences(deal, issue_id)
+    if diff.present?
+      note = IssueRevision.note(deal.creator_id, diff, options)
+      IssueRevision.create_note(issue_id, note)
+    end
+
+    IssueRevision.create_revision(issue_id, deal)
+  end
+
+  def self.create_note(issue_id, note, resources)
+    author_id = Deal.assign_to(Deal.user_name(note.creator_id, resources))
     j = Journal.new(
       journalized_id: issue_id,
       journalized_type: 'Issue',
-      user_id: User.current.id,
-      notes: Deal.note(deal, resources, notes),
-      created_on: deal.created_at
+      user_id: author_id || User.current.id,
+      notes: Deal.note(note, resources),
     )
 
-    Issue.find(issue_id).touch
-
-    if j.save
-      Deal.create_revision(issue_id, deal)
-    end
-  end
-
-  def self.create_revision(issue_id, deal)
-    rev = IssueRevision.where(issue_id: issue_id).pluck(:revision_id).last || 0
-    revision = IssueRevision.new(
-      issue_id: issue_id,
-      revision_id: rev + 1,
-      deal_info: deal.instance_values["table"].to_json ## deal.instance_values["table"] is a Hash with info about Deal
-    )
-
-    revision.save
+    j.save
   end
 
   def self.description(deal, resources)
@@ -139,27 +143,13 @@ class Deal < ActiveRecord::Base
     Setting.plugin_basecrm[:html_tags] ? items.join('<br />') : items.join("\r\n")
   end
 
-  def self.note(deal, resources, notes)
+  def self.note(note, resources)
     items = []
 
-    note = Deal.find_note(deal.id, notes)
     items << "Deal edited by: #{Deal.user_name(note.creator_id, resources)}"
     items << "Deal edited at: #{note.created_at.gsub(/[a-zA-Z]/, ' ')}"
     items << 'Content:'
     items << note.content
-
-    Setting.plugin_basecrm[:html_tags] ? items.join('<br />') : items.join("\r\n")
-  end
-
-  def self.deal_changed(deal, resources, issue_id)
-    items = []
-    last_rev = Deal.last_deal_revision(issue_id)
-    diff = deal.instance_values["table"].diff(last_rev)
-    binding.pry
-
-    items << "Deal edited by: #{Deal.user_name(deal.creator_id, resources)}"
-    items << "Deal edited at: #{deal.created_at.gsub(/[a-zA-Z]/, ' ')}"
-    items << 'Deal was changed on BaseCRM'
 
     Setting.plugin_basecrm[:html_tags] ? items.join('<br />') : items.join("\r\n")
   end
@@ -176,6 +166,7 @@ class Deal < ActiveRecord::Base
     resources.each do |resource|
       return resource.name if resource.id == id
     end
+    nil
   end
 
   def self.assign_to(full_name)
@@ -187,17 +178,9 @@ class Deal < ActiveRecord::Base
   def self.find_issue_id(deal)
     issue_id = nil
     IssueRevision.all.each do |rev|
-      issue_id = rev.issue_id if JSON.parse(rev.deal_info)["id"] == deal.id
+      issue_id = rev.issue_id if JSON.parse(rev.deal_info)['id'] == deal.id
     end
     issue_id
-  end
-
-  def self.last_deal_revision(issue_id)
-    deal_info = IssueRevision.where(issue_id: issue_id).pluck('deal_info').last
-    h = JSON.parse(deal_info).symbolize_keys
-    h[:associated_contacts].symbolize_keys!
-    h[:associated_contacts][:meta].symbolize_keys!
-    h
   end
 
   # def self.id_from_issue(subject)
@@ -220,10 +203,11 @@ class Deal < ActiveRecord::Base
   #   nil
   # end
 
-  def self.find_note(deal_id, notes)
-    notes.each do |t|
-      return t if t.resource_id == deal_id
+  def self.find_notes(deal_id, notes)
+    deal_notes = []
+    notes.each do |note|
+      deal_notes.push(note) if note.resource_id == deal_id
     end
-    nil
+    deal_notes
   end
 end
