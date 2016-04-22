@@ -33,8 +33,7 @@ class IssueRevision < ActiveRecord::Base
       journalized_id: issue_id,
       journalized_type: 'Issue',
       user_id: User.current.id,
-      notes: note,
-      created_on: Time.now
+      notes: note
     )
 
     j.save
@@ -111,10 +110,12 @@ class IssueRevision < ActiveRecord::Base
   end
 
   def self.estimated_close_date_info(date)
+    return nil if date.nil?
     "Estimated close date was changed to: #{date.gsub(/[a-zA-Z]/, ' ')}"
   end
 
   def self.tags_info(tags)
+    return nil if tags.nil?
     "Tags that were added: #{tags.join(', ')}"
   end
 end

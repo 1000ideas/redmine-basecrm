@@ -76,18 +76,14 @@ class Deal < ActiveRecord::Base
       issue_id = Deal.create_issue(deal, options[:resources])
     end
 
-
-    if options[:stages][deal.stage_id] == 'Won'
-      Issue.find(issue_id)
-           .update_attribute(:category_id, Setting.plugin_basecrm[:category_id])
-    end
+    Deal.check_stage(deal, issue_id, options[:stages])
   end
 
   def self.create_issue(deal, resources)
     author_id = Deal.assign_to(Deal.user_name(deal.owner_id, resources))
     issue = Issue.new(
       tracker_id: Setting.plugin_basecrm[:tracker_id],
-      project_id: Setting.plugin_basecrm[:project_id],
+      project_id: Setting.plugin_basecrm[:main_project_id],
       priority: IssuePriority.find_by_position_name('default'),
       subject: "DID: #{deal.id} - #{deal.name}",
       description: Deal.description(deal, resources),
@@ -123,7 +119,7 @@ class Deal < ActiveRecord::Base
       journalized_id: issue_id,
       journalized_type: 'Issue',
       user_id: author_id || User.current.id,
-      notes: Deal.note(note, resources),
+      notes: Deal.note(note, resources)
     )
 
     j.save
@@ -154,6 +150,22 @@ class Deal < ActiveRecord::Base
     Setting.plugin_basecrm[:html_tags] ? items.join('<br />') : items.join("\r\n")
   end
 
+  def self.check_stage(deal, issue_id, stages)
+    case stages[deal.stage_id]
+    when 'Won'
+      Issue.find(issue_id)
+           .update_attributes(
+             category_id: Setting.plugin_basecrm[:category_id],
+             project_id: Setting.plugin_basecrm[:next_stage_project_id]
+           )
+    when 'Quote', 'Closure'
+      Issue.find(issue_id)
+           .update_attribute(
+             :project_id, Setting.plugin_basecrm[:next_stage_project_id]
+           )
+    end
+  end
+
   def self.contact_name(id, resources)
     resources.each do |resource|
       return resource.name if resource.id == id && resource.is_organization
@@ -182,26 +194,6 @@ class Deal < ActiveRecord::Base
     end
     issue_id
   end
-
-  # def self.id_from_issue(subject)
-  #   arr = subject.split(' ')
-  #   arr[0] == 'DID:' ? arr[1] : nil
-  # end
-
-  # def self.already_exists?(issues, deal_id)
-  #   issues.each do |issue|
-  #     return true if issue['subject'] == deal_id
-  #   end
-  #   false
-  # end
-
-  # def self.issue_from_base(deal_id)
-  #   Issue.connection.select_all(Issue.select('id, subject')).each do |issue|
-  #     t = Deal.id_from_issue(issue['subject'])
-  #     return issue if t.present? && t == deal_id
-  #   end
-  #   nil
-  # end
 
   def self.find_notes(deal_id, notes)
     deal_notes = []

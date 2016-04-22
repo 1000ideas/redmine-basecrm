@@ -1,6 +1,6 @@
 <% trackers_list = Tracker.all %>
 <% projects_list = Project.all %>
-<% categories_list = IssueCategory.where(project_id: settings[:project_id]) %>
+<% categories_list = IssueCategory.where(project_id: settings[:main_project_id]) %>
 
 <table class="basecrm-plugin">
   <tbody>
@@ -11,9 +11,15 @@
       </td>
     </tr>
     <tr class="basecrm-project">
-      <th><%= l(:project) %></th>
+      <th><%= l(:main_project) %></th>
       <td>
-        <%= select_tag "settings[project_id]", options_from_collection_for_select(projects_list, :id, :name, settings[:project_id]) %>
+        <%= select_tag "settings[main_project_id]", options_from_collection_for_select(projects_list, :id, :name, settings[:main_project_id]) %>
+      </td>
+    </tr>
+    <tr class="basecrm-project">
+      <th><%= l(:move_to_project) %></th>
+      <td>
+        <%= select_tag "settings[next_stage_project_id]", options_from_collection_for_select(projects_list, :id, :name, settings[:next_stage_project_id]) %>
       </td>
     </tr>
     <tr class="basecrm-category">
