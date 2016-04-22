@@ -73,14 +73,15 @@ class Deal < ActiveRecord::Base
   end
 
   def self.create_ticket(deal, resources)
+    author_id = Deal.assign_to(Deal.user_name(deal.owner_id, resources))
     issue = Issue.new(
       tracker_id: Setting.plugin_basecrm[:tracker_id],
       project_id: Setting.plugin_basecrm[:project_id],
       priority: IssuePriority.find_by_position_name('default'),
       subject: "DID: #{deal.id} - #{deal.name}",
       description: Deal.description(deal, resources),
-      author_id: User.current.id,
-      assigned_to_id: Deal.assign_to(Deal.user_name(deal.owner_id, resources))
+      author_id: author_id,
+      assigned_to_id: author_id
     )
 
     issue.save
@@ -158,11 +159,12 @@ class Deal < ActiveRecord::Base
   end
 
   def self.ticket_from_base(deal_id)
+    issues = []
     Issue.connection.select_all(Issue.select('id, subject')).each do |issue|
       t = Deal.id_from_ticket(issue['subject'])
-      return issue if t.present? && t == deal_id
+      issues.push(issue) if t.present? && t == deal_id
     end
-    nil
+    issues.last
   end
 
   def self.find_note(deal_id, notes)
