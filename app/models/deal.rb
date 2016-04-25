@@ -11,7 +11,7 @@ class Deal < ActiveRecord::Base
     rescue
       return { error: l(:client_error) }
     end
-
+    # '5dd38d5b675c56f9651b42ff66dde2d74971d0490c6af94aa66cf3e87b47b801')
     begin
       sync = BaseCRM::Sync.new(
         client: client,
@@ -28,17 +28,21 @@ class Deal < ActiveRecord::Base
     resources = []
     deals = []
     notes = []
-    pipeline = {}
+    sources = {}
+    stages = {}
 
     sync.fetch do |meta, resource|
-      if meta.type.to_s == 'deal'
+      case meta.type.to_s
+      when 'deal'
         deals.push(resource)
         meta.sync.ack
-      elsif BASE_TYPES.include? meta.type.to_s
+      when 'user', 'contact'
         resources.push(resource)
-      elsif meta.type.to_s == 'pipeline'
-        pipeline = Deal.pipeline_stages(resource)
-      elsif meta.type.to_s == 'note'
+      when 'pipeline'
+        stages = Deal.pipeline_stages(resource)
+      when 'source'
+        sources[resource.id] = resource.name
+      when 'note'
         notes.push(resource)
         meta.sync.ack
       else
@@ -46,38 +50,40 @@ class Deal < ActiveRecord::Base
       end
     end
 
-    { deals: deals, resources: resources, notes: notes, pipeline: pipeline }
+    {
+      deals: deals,
+      resources: resources,
+      notes: notes,
+      sources: sources,
+      stages: stages
+    }
   end
 
   def self.pipeline_stages(resource)
-    pipeline = {}
+    stages = {}
     resource.stages[:items].each do |item|
-      pipeline[item[:data][:name]] = item[:data][:id]
+      stages[item[:data][:id]] = item[:data][:name]
     end
-    pipeline
+    stages
   end
 
-  def self.create_or_update_ticket(deal, resources, notes, pipeline)
-    ticket = Deal.ticket_from_base(deal.id.to_s)
+  def self.create_or_update_issue(deal, options)
+    issue_id = Deal.find_issue_id(deal)
 
-    if ticket.present?
-      Deal.update_ticket(deal, resources, ticket, notes)
+    if issue_id.present?
+      Deal.update_issue(deal, issue_id, options)
     else
-      ticket = {}
-      ticket['id'] = Deal.create_ticket(deal, resources)
+      issue_id = Deal.create_issue(deal, options[:resources])
     end
 
-    if deal.stage_id == pipeline['Won']
-      Issue.find(ticket['id'])
-           .update_attribute(:category_id, Setting.plugin_basecrm[:category_id])
-    end
+    Deal.check_stage(deal, issue_id, options[:stages])
   end
 
-  def self.create_ticket(deal, resources)
+  def self.create_issue(deal, resources)
     author_id = Deal.assign_to(Deal.user_name(deal.owner_id, resources))
     issue = Issue.new(
       tracker_id: Setting.plugin_basecrm[:tracker_id],
-      project_id: Setting.plugin_basecrm[:project_id],
+      project_id: Setting.plugin_basecrm[:main_project_id],
       priority: IssuePriority.find_by_position_name('default'),
       subject: "DID: #{deal.id} - #{deal.name}",
       description: Deal.description(deal, resources),
@@ -85,25 +91,38 @@ class Deal < ActiveRecord::Base
       assigned_to_id: author_id
     )
 
-    if issue.save
-      return issue.id
-    end
+    IssueRevision.create_revision(issue.id, deal) if issue.save
+
+    issue.id
   end
 
-  def self.update_ticket(deal, resources, ticket, notes)
-    if Deal.find_note(deal.id, notes)
-      j = Journal.new(
-        journalized_id: ticket['id'],
-        journalized_type: 'Issue',
-        user_id: User.current.id,
-        notes: Deal.note(deal, resources, notes),
-        created_on: deal.created_at
-      )
-
-      j.save
-
-      Issue.find(ticket['id']).touch
+  def self.update_issue(deal, issue_id, options)
+    deal_notes = Deal.find_notes(deal.id, options[:notes])
+    deal_notes.each do |note|
+      if Deal.create_note(issue_id, note, options[:resources])
+        Issue.find(issue_id).touch
+      end
     end
+
+    diff = IssueRevision.differences(deal, issue_id)
+    if diff.present?
+      note = IssueRevision.note(deal.creator_id, diff, options)
+      IssueRevision.create_note(issue_id, note)
+    end
+
+    IssueRevision.create_revision(issue_id, deal)
+  end
+
+  def self.create_note(issue_id, note, resources)
+    author_id = Deal.assign_to(Deal.user_name(note.creator_id, resources))
+    j = Journal.new(
+      journalized_id: issue_id,
+      journalized_type: 'Issue',
+      user_id: author_id || User.current.id,
+      notes: Deal.note(note, resources)
+    )
+
+    j.save
   end
 
   def self.description(deal, resources)
@@ -120,22 +139,31 @@ class Deal < ActiveRecord::Base
     Setting.plugin_basecrm[:html_tags] ? items.join('<br />') : items.join("\r\n")
   end
 
-  def self.note(deal, resources, notes)
+  def self.note(note, resources)
     items = []
 
-    if notes.any?
-      deal_note = Deal.find_note(deal.id, notes)
-      items << "Deal edited by: #{Deal.user_name(deal_note.creator_id, resources)}"
-      items << "Deal edited at: #{deal_note.created_at}"
-      items << 'Content:'
-      items << deal_note.content
-    else
-      items << "Deal edited by: #{Deal.user_name(deal.creator_id, resources)}"
-      items << "Deal edited at: #{deal.created_at}"
-      items << 'Deal was changed on BaseCRM'
-    end
+    items << "Deal edited by: #{Deal.user_name(note.creator_id, resources)}"
+    items << "Deal edited at: #{note.created_at.gsub(/[a-zA-Z]/, ' ')}"
+    items << 'Content:'
+    items << note.content
 
     Setting.plugin_basecrm[:html_tags] ? items.join('<br />') : items.join("\r\n")
+  end
+
+  def self.check_stage(deal, issue_id, stages)
+    case stages[deal.stage_id]
+    when 'Won'
+      Issue.find(issue_id)
+           .update_attributes(
+             category_id: Setting.plugin_basecrm[:category_id],
+             project_id: Setting.plugin_basecrm[:next_stage_project_id]
+           )
+    when 'Quote', 'Closure'
+      Issue.find(issue_id)
+           .update_attribute(
+             :project_id, Setting.plugin_basecrm[:next_stage_project_id]
+           )
+    end
   end
 
   def self.contact_name(id, resources)
@@ -150,6 +178,7 @@ class Deal < ActiveRecord::Base
     resources.each do |resource|
       return resource.name if resource.id == id
     end
+    nil
   end
 
   def self.assign_to(full_name)
@@ -158,24 +187,19 @@ class Deal < ActiveRecord::Base
     return assignee.id unless assignee.nil?
   end
 
-  def self.id_from_ticket(subject)
-    arr = subject.split(' ')
-    arr[0] == 'DID:' ? arr[1] : nil
+  def self.find_issue_id(deal)
+    issue_id = nil
+    IssueRevision.all.each do |rev|
+      issue_id = rev.issue_id if JSON.parse(rev.deal_info)['id'] == deal.id
+    end
+    issue_id
   end
 
-  def self.ticket_from_base(deal_id)
-    issues = []
-    Issue.connection.select_all(Issue.select('id, subject')).each do |issue|
-      t = Deal.id_from_ticket(issue['subject'])
-      issues.push(issue) if t.present? && t == deal_id
+  def self.find_notes(deal_id, notes)
+    deal_notes = []
+    notes.each do |note|
+      deal_notes.push(note) if note.resource_id == deal_id
     end
-    issues.last
-  end
-
-  def self.find_note(deal_id, notes)
-    notes.each do |t|
-      return t if t.resource_id == deal_id
-    end
-    nil
+    deal_notes
   end
 end
