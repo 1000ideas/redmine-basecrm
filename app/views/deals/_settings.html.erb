@@ -1,6 +1,6 @@
 <% trackers_list = Tracker.all %>
 <% projects_list = Project.all %>
-<% categories_list = IssueCategory.where(project_id: settings[:main_project_id]) %>
+<% categories_list = IssueCategory.where(project_id: settings[:next_stage_project_id]) %>
 
 <table class="basecrm-plugin">
   <tbody>

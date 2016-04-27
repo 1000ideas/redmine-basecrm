@@ -3,12 +3,13 @@ class IssueRevision < ActiveRecord::Base
 
   belongs_to :issue, foreign_key: 'issue_id'
 
+  ## deal.instance_values["table"] is a Hash with info about Deal
   def self.create_revision(issue_id, deal)
     rev_num = where(issue_id: issue_id).pluck(:revision_id).last || 0
     revision = new(
       issue_id: issue_id,
       revision_id: rev_num + 1,
-      deal_info: deal.instance_values['table'].to_json ## deal.instance_values["table"] is a Hash with info about Deal
+      deal_info: deal.instance_values['table'].to_json
     )
 
     revision.save
