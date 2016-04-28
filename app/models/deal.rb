@@ -152,13 +152,13 @@ class Deal < ActiveRecord::Base
 
   def self.check_stage(deal, issue_id, stages)
     case stages[deal.stage_id]
-    when 'Won'
+    when 'Won', /Wygrane/
       Issue.find(issue_id)
            .update_attributes(
              category_id: Setting.plugin_basecrm[:category_id],
              project_id: Setting.plugin_basecrm[:next_stage_project_id]
            )
-    when 'Quote', 'Closure'
+    when 'Quote', 'Closure', /Oferta|Zamkni/
       Issue.find(issue_id)
            .update_attribute(
              :project_id, Setting.plugin_basecrm[:next_stage_project_id]
