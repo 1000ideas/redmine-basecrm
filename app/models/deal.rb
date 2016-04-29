@@ -179,7 +179,6 @@ class Deal < ActiveRecord::Base
            .update_attribute(
              :project_id, Setting.plugin_basecrm[:next_stage_project_id]
            )
-    # is it called at all?
     when /niezakwali|utrac/i
       Issue.find(issue_id)
            .update_attributes({
