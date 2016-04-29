@@ -20,6 +20,6 @@ class DealsController < ApplicationController
       end
     end
 
-    redirect_to home_path
+    render text: "ok", layout: false
   end
 end

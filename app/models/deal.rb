@@ -11,7 +11,7 @@ class Deal < ActiveRecord::Base
     rescue
       return { error: l(:client_error) }
     end
-    
+
     begin
       sync = BaseCRM::Sync.new(
         client: client,
@@ -68,6 +68,8 @@ class Deal < ActiveRecord::Base
   end
 
   def self.create_or_update_issue(deal, options)
+    return if options[:stages][deal.stage_id] =~ /poten/i
+
     issue_id = Deal.find_issue_id(deal)
 
     if issue_id.present?
@@ -91,17 +93,32 @@ class Deal < ActiveRecord::Base
       assigned_to_id: author_id
     )
 
-    IssueRevision.create_revision(issue.id, deal) if issue.save
 
-    issue.id
+    if issue.save
+      IssueRevision.create_revision(issue.id, deal) 
+      
+      if (custom_field = issue.custom_field_values.find{|cfv| cfv.custom_field.name =~ /budget/i})
+        custom_field.value = deal.value
+        issue.save
+      end
+
+      issue.id
+    end
   end
 
   def self.update_issue(deal, issue_id, options)
+    issue = Issue.find(issue_id)
+
     deal_notes = Deal.find_notes(deal.id, options[:notes])
     deal_notes.each do |note|
       if Deal.create_note(issue_id, note, options[:resources])
-        Issue.find(issue_id).touch
+        issue.touch
       end
+    end
+
+    if (custom_field = issue.custom_field_values.find{|cfv| cfv.custom_field.name =~ /budget/i})
+      custom_field.value = deal.value
+      issue.save
     end
 
     diff = IssueRevision.differences(deal, issue_id)
@@ -133,7 +150,6 @@ class Deal < ActiveRecord::Base
     items << "Contact Name: #{Deal.contact_name(deal.contact_id, resources)}" unless deal.contact_id.nil?
     items << "Company Name: #{Deal.contact_name(deal.organization_id, resources)}" unless deal.organization_id.nil?
     items << "User name: #{Deal.user_name(deal.owner_id, resources)}"
-    items << "Scope: #{deal.value} #{deal.currency}"
     items << "Link: #{link}"
 
     Setting.plugin_basecrm[:html_tags] ? items.join('<br />') : items.join("\r\n")
@@ -152,13 +168,13 @@ class Deal < ActiveRecord::Base
 
   def self.check_stage(deal, issue_id, stages)
     case stages[deal.stage_id]
-    when 'Won', /Wygrane/
+    when /Won|Wygrane/i
       Issue.find(issue_id)
            .update_attributes(
              category_id: Setting.plugin_basecrm[:category_id],
              project_id: Setting.plugin_basecrm[:next_stage_project_id]
            )
-    when 'Quote', 'Closure', /Oferta|Zamkni/
+    when /Closure|Zamkni/i
       Issue.find(issue_id)
            .update_attribute(
              :project_id, Setting.plugin_basecrm[:next_stage_project_id]
