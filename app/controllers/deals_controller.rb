@@ -20,6 +20,6 @@ class DealsController < ApplicationController
       end
     end
 
-    render text: "ok", layout: false
+    render text: 'ok', layout: false
   end
 end

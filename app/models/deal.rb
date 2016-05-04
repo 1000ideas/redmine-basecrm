@@ -2,6 +2,7 @@ class Deal < ActiveRecord::Base
   unloadable
 
   BASE_TYPES = %w(user contact).freeze
+  REDUNDANT_KEYS = [:last_activity_at, :last_stage_change_by_id, :updated_at].freeze
 
   def self.connect_to_base
     begin
@@ -93,11 +94,10 @@ class Deal < ActiveRecord::Base
       assigned_to_id: author_id
     )
 
-
     if issue.save
-      IssueRevision.create_revision(issue.id, deal) 
+      IssueRevision.create_revision(issue.id, deal)
       
-      if (custom_field = issue.custom_field_values.find{|cfv| cfv.custom_field.name =~ /budget/i})
+      if (custom_field = issue.custom_field_values.find { |cfv| cfv.custom_field.name =~ /budget/i })
         custom_field.value = deal.value
         issue.save
       end
@@ -108,23 +108,20 @@ class Deal < ActiveRecord::Base
 
   def self.update_issue(deal, issue_id, options)
     issue = Issue.find(issue_id)
-
     deal_notes = Deal.find_notes(deal.id, options[:notes])
     deal_notes.each do |note|
-      if Deal.create_note(issue_id, note, options[:resources])
-        issue.touch
-      end
+      issue.touch if Deal.create_note(issue_id, note, options[:resources])
     end
 
-    if (custom_field = issue.custom_field_values.find{|cfv| cfv.custom_field.name =~ /budget/i})
+    if (custom_field = issue.custom_field_values.find { |cfv| cfv.custom_field.name =~ /budget/i })
       custom_field.value = deal.value
       issue.save
     end
 
     diff = IssueRevision.differences(deal, issue_id)
-    if diff.present?
+    if diff.any? && (diff.keys - REDUNDANT_KEYS).any?
       note = IssueRevision.note(deal.creator_id, diff, options)
-      IssueRevision.create_note(issue_id, note)
+      issue.touch if IssueRevision.create_note(issue_id, note)
     end
 
     IssueRevision.create_revision(issue_id, deal)
@@ -176,15 +173,15 @@ class Deal < ActiveRecord::Base
            )
     when /Closure|Zamkni/i
       Issue.find(issue_id)
-           .update_attribute(
-             :project_id, Setting.plugin_basecrm[:next_stage_project_id]
+           .update_attributes(
+             project_id: Setting.plugin_basecrm[:next_stage_project_id]
            )
     when /niezakwali|utrac/i
       Issue.find(issue_id)
-           .update_attributes({
-              status_id: 5,
-              closed_on: DateTime.now
-            })
+           .update_attributes(
+             status_id: 5,
+             closed_on: DateTime.now
+           )
     end
   end
 
