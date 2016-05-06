@@ -40,12 +40,12 @@ class IssueRevision < ActiveRecord::Base
     j.save
   end
 
-  def self.note(creator_id, diff, options)
+  def self.note(creator_id, updated_at, diff, options)
     items = []
 
     items << 'Deal was changed on BaseCRM'
     items << "Deal edited by: #{Deal.user_name(creator_id, options[:resources])}"
-    items << "Deal edited at: #{Time.now}"
+    items << "Deal edited at: #{Time.parse(updated_at).to_time}"
     items << IssueRevision.note_details(diff, options).flatten
 
     Setting.plugin_basecrm[:html_tags] ? items.join('<br />') : items.join("\r\n")
@@ -70,7 +70,7 @@ class IssueRevision < ActiveRecord::Base
 
   def self.name_info(name)
     return nil if name.nil?
-    "Name of the deal changed to: #{name}"
+    "Name was changed to: #{name}"
   end
 
   def self.value_info(value)
@@ -90,7 +90,7 @@ class IssueRevision < ActiveRecord::Base
 
   def self.stage_change_at_info(last_change_at)
     return nil if last_change_at.nil?
-    "Stage was changed at: #{Time.now}"
+    "Stage was changed at: #{Time.parse(last_change_at).to_time}"
   end
 
   def self.stage_change_by_info(last_change_by, resources)
@@ -112,7 +112,7 @@ class IssueRevision < ActiveRecord::Base
 
   def self.estimated_close_date_info(date)
     return nil if date.nil?
-    "Estimated close date was changed to: #{date.gsub(/[a-zA-Z]/, ' ')}"
+    "Estimated close date was changed to: #{Date.parse(date)}"
   end
 
   def self.tags_info(tags)

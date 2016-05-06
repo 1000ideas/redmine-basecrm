@@ -1,8 +1,9 @@
 class Deal < ActiveRecord::Base
   unloadable
 
-  BASE_TYPES = %w(user contact).freeze
-  REDUNDANT_KEYS = [:last_activity_at, :last_stage_change_by_id, :updated_at].freeze
+  REDUNDANT_KEYS = [:last_activity_at,
+                    :last_stage_change_by_id,
+                    :updated_at].freeze
 
   def self.connect_to_base
     begin
@@ -120,7 +121,7 @@ class Deal < ActiveRecord::Base
 
     diff = IssueRevision.differences(deal, issue_id)
     if diff.any? && (diff.keys - REDUNDANT_KEYS).any?
-      note = IssueRevision.note(deal.creator_id, diff, options)
+      note = IssueRevision.note(deal.creator_id, deal.updated_at, diff, options)
       issue.touch if IssueRevision.create_note(issue_id, note)
     end
 
@@ -156,7 +157,7 @@ class Deal < ActiveRecord::Base
     items = []
 
     items << "Deal edited by: #{Deal.user_name(note.creator_id, resources)}"
-    items << "Deal edited at: #{note.created_at.gsub(/[a-zA-Z]/, ' ')}"
+    items << "Deal edited at: #{Time.parse(note.created_at).to_time}"
     items << 'Content:'
     items << note.content
 
