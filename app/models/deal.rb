@@ -72,7 +72,7 @@ class Deal < ActiveRecord::Base
   def self.create_or_update_issue(deal, options)
     return if options[:stages][deal.stage_id] =~ /poten/i
 
-    issue_id = Deal.find_issue_id(deal)
+    issue_id = Deal.find_issue_id(deal.id)
 
     if issue_id.present?
       Deal.update_issue(deal, issue_id, options)
@@ -80,7 +80,7 @@ class Deal < ActiveRecord::Base
       issue_id = Deal.create_issue(deal, options[:resources])
     end
 
-    Deal.check_stage(deal, issue_id, options[:stages])
+    Deal.check_stage(deal.stage_id, issue_id, options[:stages])
   end
 
   def self.create_issue(deal, resources)
@@ -89,7 +89,7 @@ class Deal < ActiveRecord::Base
       tracker_id: Setting.plugin_basecrm[:tracker_id],
       project_id: Setting.plugin_basecrm[:main_project_id],
       priority: IssuePriority.find_by_position_name('default'),
-      subject: "DID: #{deal.id} - #{deal.name}",
+      subject: deal.name.to_s,
       description: Deal.description(deal, resources),
       author_id: author_id || User.current.id,
       assigned_to_id: author_id
@@ -97,14 +97,10 @@ class Deal < ActiveRecord::Base
 
     if issue.save
       IssueRevision.create_revision(issue.id, deal)
-      
-      if (custom_field = issue.custom_field_values.find { |cfv| cfv.custom_field.name =~ /budget/i })
-        custom_field.value = deal.value
-        issue.save
-      end
-
-      issue.id
+      Deal.update_custom_fields(issue, deal.id, deal.value)
     end
+
+    issue.id
   end
 
   def self.update_issue(deal, issue_id, options)
@@ -114,10 +110,7 @@ class Deal < ActiveRecord::Base
       issue.touch if Deal.create_note(issue_id, note, options[:resources])
     end
 
-    if (custom_field = issue.custom_field_values.find { |cfv| cfv.custom_field.name =~ /budget/i })
-      custom_field.value = deal.value
-      issue.save
-    end
+    Deal.update_custom_fields(issue, deal.id, deal.value)
 
     diff = IssueRevision.differences(deal, issue_id)
     if diff.any? && (diff.keys - REDUNDANT_KEYS).any?
@@ -128,44 +121,8 @@ class Deal < ActiveRecord::Base
     IssueRevision.create_revision(issue_id, deal)
   end
 
-  def self.create_note(issue_id, note, resources)
-    author_id = Deal.assign_to(Deal.user_name(note.creator_id, resources))
-    j = Journal.new(
-      journalized_id: issue_id,
-      journalized_type: 'Issue',
-      user_id: author_id || User.current.id,
-      notes: Deal.note(note, resources)
-    )
-
-    j.save
-  end
-
-  def self.description(deal, resources)
-    items = []
-
-    link = "https://app.futuresimple.com/sales/deals/#{deal.id}"
-
-    items << "Contact Name: #{Deal.contact_name(deal.contact_id, resources)}" unless deal.contact_id.nil?
-    items << "Company Name: #{Deal.contact_name(deal.organization_id, resources)}" unless deal.organization_id.nil?
-    items << "User name: #{Deal.user_name(deal.owner_id, resources)}"
-    items << "Link: #{link}"
-
-    Setting.plugin_basecrm[:html_tags] ? items.join('<br />') : items.join("\r\n")
-  end
-
-  def self.note(note, resources)
-    items = []
-
-    items << "Deal edited by: #{Deal.user_name(note.creator_id, resources)}"
-    items << "Deal edited at: #{Time.parse(note.created_at).to_time}"
-    items << 'Content:'
-    items << note.content
-
-    Setting.plugin_basecrm[:html_tags] ? items.join('<br />') : items.join("\r\n")
-  end
-
-  def self.check_stage(deal, issue_id, stages)
-    case stages[deal.stage_id]
+  def self.check_stage(stage_id, issue_id, stages)
+    case stages[stage_id]
     when /Won|Wygrane/i
       Issue.find(issue_id)
            .update_attributes(
@@ -184,6 +141,42 @@ class Deal < ActiveRecord::Base
              closed_on: DateTime.now
            )
     end
+  end
+
+  def self.description(deal, resources)
+    items = []
+
+    link = "https://app.futuresimple.com/sales/deals/#{deal.id}"
+
+    items << "Contact Name: #{Deal.contact_name(deal.contact_id, resources)}" unless deal.contact_id.nil?
+    items << "Company Name: #{Deal.contact_name(deal.organization_id, resources)}" unless deal.organization_id.nil?
+    items << "User name: #{Deal.user_name(deal.owner_id, resources)}"
+    items << "Link: #{link}"
+
+    Setting.plugin_basecrm[:html_tags] ? items.join('<br />') : items.join("\r\n")
+  end
+
+  def self.create_note(issue_id, note, resources)
+    author_id = Deal.assign_to(Deal.user_name(note.creator_id, resources))
+    j = Journal.new(
+      journalized_id: issue_id,
+      journalized_type: 'Issue',
+      user_id: author_id || User.current.id,
+      notes: Deal.note(note, resources)
+    )
+
+    j.save
+  end
+
+  def self.note(note, resources)
+    items = []
+
+    items << "Deal edited by: #{Deal.user_name(note.creator_id, resources)}"
+    items << "Deal edited at: #{Time.parse(note.created_at).to_time}"
+    items << 'Content:'
+    items << note.content
+
+    Setting.plugin_basecrm[:html_tags] ? items.join('<br />') : items.join("\r\n")
   end
 
   def self.contact_name(id, resources)
@@ -207,12 +200,10 @@ class Deal < ActiveRecord::Base
     return assignee.id unless assignee.nil?
   end
 
-  def self.find_issue_id(deal)
-    issue_id = nil
-    IssueRevision.all.each do |rev|
-      issue_id = rev.issue_id if JSON.parse(rev.deal_info)['id'] == deal.id
-    end
-    issue_id
+  def self.find_issue_id(deal_id)
+    cf_id = CustomField.find { |cf| cf.name =~ /did/i }.try(:id)
+    CustomValue.find { |cv| cv.custom_field_id == cf_id && cv.value == deal_id.to_s }
+               .try(:customized_id)
   end
 
   def self.find_notes(deal_id, notes)
@@ -221,5 +212,17 @@ class Deal < ActiveRecord::Base
       deal_notes.push(note) if note.resource_id == deal_id
     end
     deal_notes
+  end
+
+  def self.update_custom_fields(issue, deal_id, deal_value)
+    if (custom_field = issue.custom_field_values.find { |cfv| cfv.custom_field.name =~ /did/i })
+      custom_field.value = deal_id
+      issue.save
+    end
+
+    if (custom_field = issue.custom_field_values.find { |cfv| cfv.custom_field.name =~ /budget/i })
+      custom_field.value = deal_value
+      issue.save
+    end
   end
 end
