@@ -45,7 +45,7 @@ class IssueRevision < ActiveRecord::Base
 
     items << 'Deal was changed on BaseCRM'
     items << "Deal edited by: #{Deal.user_name(creator_id, options[:resources])}"
-    items << "Deal edited at: #{Time.parse(updated_at).to_time}"
+    items << "Deal edited at: #{Time.parse(updated_at).in_time_zone('Warsaw')}"
     items << IssueRevision.note_details(diff, options).flatten
 
     Setting.plugin_basecrm[:html_tags] ? items.join('<br />') : items.join("\r\n")
@@ -90,7 +90,7 @@ class IssueRevision < ActiveRecord::Base
 
   def self.stage_change_at_info(last_change_at)
     return nil if last_change_at.nil?
-    "Stage was changed at: #{Time.parse(last_change_at).to_time}"
+    "Stage was changed at: #{Time.parse(last_change_at).in_time_zone('Warsaw')}"
   end
 
   def self.stage_change_by_info(last_change_by, resources)

@@ -172,7 +172,7 @@ class Deal < ActiveRecord::Base
     items = []
 
     items << "Deal edited by: #{Deal.user_name(note.creator_id, resources)}"
-    items << "Deal edited at: #{Time.parse(note.created_at).to_time}"
+    items << "Deal edited at: #{Time.parse(note.created_at).in_time_zone('Warsaw')}"
     items << 'Content:'
     items << note.content
 
