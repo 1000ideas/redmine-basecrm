@@ -1,7 +1,7 @@
 namespace :basecrm do
   desc 'Rewrite issues subjects and put DID in custom field'
   task rewrite_subjects: [:environment] do
-    issues = Issue.where('subject REGEXP ?', '^DID: ')
+    issues = Issue.where('subject REGEXP ?', '^\s?DID: ')
 
     issues.each do |issue|
       deal_info = deal_subject(issue.subject)
