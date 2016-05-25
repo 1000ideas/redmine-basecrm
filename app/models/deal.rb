@@ -122,24 +122,32 @@ class Deal < ActiveRecord::Base
   end
 
   def self.check_stage(stage_id, issue_id, stages)
+    issue = Issue.find(issue_id)
     case stages[stage_id]
     when /Won|Wygrane/i
-      Issue.find(issue_id)
-           .update_attributes(
-             category_id: Setting.plugin_basecrm[:category_id],
-             project_id: Setting.plugin_basecrm[:next_stage_project_id]
-           )
+      issue.update_attributes(
+        category_id: Setting.plugin_basecrm[:category_id],
+        project_id: Setting.plugin_basecrm[:next_stage_project_id]
+      )
     when /Closure|Zamkni/i
-      Issue.find(issue_id)
-           .update_attributes(
-             project_id: Setting.plugin_basecrm[:next_stage_project_id]
-           )
-    when /niezakwali|utrac/i
-      Issue.find(issue_id)
-           .update_attributes(
-             status_id: 5,
-             closed_on: DateTime.now
-           )
+      issue.update_attributes(
+        project_id: Setting.plugin_basecrm[:next_stage_project_id]
+      )
+    when /Lost|Unquali|Niezakwali|Utrac/i
+      issue.update_attributes(
+        status_id: IssueStatus.where(is_closed: true).first.id,
+        closed_on: DateTime.now
+      )
+    end
+    Deal.reopen_issue(issue, stages[stage_id]) unless issue.closed_on.nil?
+  end
+
+  def self.reopen_issue(issue, stage)
+    if stage =~ /Incom|^Quali|Quote|Closure|Won|Wygrane|Zamkni/i
+      issue.update_attributes(
+        status_id: IssueStatus.where(is_default: true).first.id,
+        closed_on: nil
+      )
     end
   end
 
