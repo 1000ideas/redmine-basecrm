@@ -111,6 +111,9 @@ class Deal < ActiveRecord::Base
     end
 
     Deal.update_custom_fields(issue, deal.id, deal.value)
+    issue.update_attributes(
+      assigned_to_id: Deal.assign_to(Deal.user_name(deal.owner_id, options[:resources]))
+    ) if deal.owner_id.present?
 
     diff = IssueRevision.differences(deal, issue_id)
     if diff.any? && (diff.keys - REDUNDANT_KEYS).any?
