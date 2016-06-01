@@ -5,7 +5,6 @@ class Deal < ActiveRecord::Base
                     :updated_at,
                     :associated_contacts,
                     :contact_id,
-                    :loss_reason_id,
                     :dropbox_email
                    ].freeze
 
@@ -40,6 +39,7 @@ class Deal < ActiveRecord::Base
     notes = []
     sources = {}
     stages = {}
+    loss_reasons = []
 
     sync.fetch do |meta, resource|
       case meta.type.to_s
@@ -55,6 +55,8 @@ class Deal < ActiveRecord::Base
       when 'note'
         notes.push(resource)
         meta.sync.ack
+      when 'loss_reason'
+        loss_reasons.push(resource)
       else
         meta.sync.ack
       end
@@ -65,7 +67,8 @@ class Deal < ActiveRecord::Base
       resources: resources,
       notes: notes,
       sources: sources,
-      stages: stages
+      stages: stages,
+      loss_reasons: loss_reasons
     }
   end
 
@@ -243,5 +246,12 @@ class Deal < ActiveRecord::Base
       custom_field.value = deal_value
       issue.save
     end
+  end
+
+  def self.loss_reason(loss_reason_id, loss_reasons)
+    loss_reasons.each do |reason|
+      return reason.name if reason.id == loss_reason_id
+    end
+    nil
   end
 end

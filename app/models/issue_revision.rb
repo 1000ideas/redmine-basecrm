@@ -64,6 +64,7 @@ class IssueRevision < ActiveRecord::Base
     items << IssueRevision.hot_info(diff[:is_hot])
     items << IssueRevision.estimated_close_date_info(diff[:estimated_close_date])
     items << IssueRevision.tags_info(diff[:tags])
+    items << IssueRevision.loss_reason_info(diff[:loss_reason_id], options[:loss_reasons])
 
     items.compact
   end
@@ -118,5 +119,10 @@ class IssueRevision < ActiveRecord::Base
   def self.tags_info(tags)
     return nil if tags.nil?
     "Tags that were added: #{tags.join(', ')}"
+  end
+
+  def self.loss_reason_info(loss_reason_id, loss_reasons)
+    return nil if loss_reason_id.nil?
+    "Loss reason of deal: #{Deal.loss_reason(loss_reason_id, loss_reasons)}"
   end
 end
