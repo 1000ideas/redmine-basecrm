@@ -1,9 +1,11 @@
 class Deal < ActiveRecord::Base
   unloadable
 
-  REDUNDANT_KEYS = [:last_activity_at,
-                    :last_stage_change_by_id,
-                    :updated_at].freeze
+  REDUNDANT_KEYS = [:last_activity_at, :updated_at].freeze
+
+  def self.basecrm_logger
+    @@basecrm_logger ||= Logger.new("#{Rails.root}/log/basecrm.log")
+  end
 
   def self.connect_to_base
     begin
@@ -116,12 +118,16 @@ class Deal < ActiveRecord::Base
     ) if deal.owner_id.present?
 
     diff = IssueRevision.differences(deal, issue_id)
+    basecrm_logger.info("Log time: #{Time.now}")
+    basecrm_logger.info("Deal info from Base:\n#{deal}\n")
     if diff.any? && (diff.keys - REDUNDANT_KEYS).any?
+      basecrm_logger.info("Diff between actual and last version:\n#{diff}\n\n")
       note = IssueRevision.note(deal.creator_id, deal.updated_at, diff, options)
       issue.touch if IssueRevision.create_note(issue_id, note)
+      IssueRevision.create_revision(issue_id, deal)
+    else
+      basecrm_logger.info("No revision nor notes were created")
     end
-
-    IssueRevision.create_revision(issue_id, deal)
   end
 
   def self.check_stage(stage_id, issue_id, stages)
