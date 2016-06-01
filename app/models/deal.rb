@@ -180,14 +180,18 @@ class Deal < ActiveRecord::Base
 
   def self.create_note(issue_id, note, resources)
     author_id = Deal.assign_to(Deal.user_name(note.creator_id, resources))
-    j = Journal.new(
-      journalized_id: issue_id,
-      journalized_type: 'Issue',
-      user_id: author_id || User.current.id,
-      notes: Deal.note(note, resources)
-    )
-
-    j.save
+    note = Deal.note(note, resources)
+    unless Deal.note_exists?(issue_id, note)
+      j = Journal.new(
+        journalized_id: issue_id,
+        journalized_type: 'Issue',
+        user_id: author_id || User.current.id,
+        notes: note
+      )
+      j.save
+    else
+      false
+    end
   end
 
   def self.note(note, resources)
@@ -234,6 +238,14 @@ class Deal < ActiveRecord::Base
       deal_notes.push(note) if note.resource_id == deal_id
     end
     deal_notes
+  end
+
+  def self.note_exists?(issue_id, note)
+    journals = Journal.where(journalized_type: 'Issue', journalized_id: issue_id)
+    journals.each do |journal|
+      return true if journal.notes == note
+    end
+    false
   end
 
   def self.update_custom_fields(issue, deal_id, deal_value)
