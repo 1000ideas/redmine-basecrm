@@ -1,7 +1,13 @@
 class Deal < ActiveRecord::Base
   unloadable
 
-  REDUNDANT_KEYS = [:last_activity_at, :updated_at].freeze
+  REDUNDANT_KEYS = [:last_activity_at,
+                    :updated_at,
+                    :associated_contacts,
+                    :contact_id,
+                    :loss_reason_id,
+                    :dropbox_email
+                   ].freeze
 
   def self.basecrm_logger
     @@basecrm_logger ||= Logger.new("#{Rails.root}/log/basecrm.log")
@@ -118,15 +124,11 @@ class Deal < ActiveRecord::Base
     ) if deal.owner_id.present?
 
     diff = IssueRevision.differences(deal, issue_id)
-    basecrm_logger.info("Log time: #{Time.now}")
-    basecrm_logger.info("Deal info from Base:\n#{deal}\n")
-    if diff.any? && (diff.keys - REDUNDANT_KEYS).any?
-      basecrm_logger.info("Diff between actual and last version:\n#{diff}\n\n")
+    if diff.any? && (k = diff.keys - REDUNDANT_KEYS).any?
+      return if k.length == 1 && k.first == :last_stage_change_at
       note = IssueRevision.note(deal.creator_id, deal.updated_at, diff, options)
       issue.touch if IssueRevision.create_note(issue_id, note)
       IssueRevision.create_revision(issue_id, deal)
-    else
-      basecrm_logger.info("No revision nor notes were created")
     end
   end
 
@@ -190,7 +192,7 @@ class Deal < ActiveRecord::Base
 
     items << "Deal edited by: #{Deal.user_name(note.creator_id, resources)}"
     items << "Deal edited at: #{Time.parse(note.created_at).in_time_zone('Warsaw')}"
-    items << 'Content:'
+    items << 'Note was added to deal. Content:'
     items << note.content
 
     Setting.plugin_basecrm[:html_tags] ? items.join('<br />') : items.join("\r\n")
