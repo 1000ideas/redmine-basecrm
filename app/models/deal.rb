@@ -121,13 +121,11 @@ class Deal < ActiveRecord::Base
       issue.touch if Deal.create_note(issue_id, note, options[:resources])
     end
 
-    Deal.update_custom_fields(issue, deal.id, deal.value)
-    issue.update_attributes(
-      assigned_to_id: Deal.assign_to(Deal.user_name(deal.owner_id, options[:resources]))
-    ) if deal.owner_id.present?
+    Deal.update_issue_fields(issue, deal, options[:resources])
 
     diff = IssueRevision.differences(deal, issue_id)
     if diff.any? && (k = diff.keys - REDUNDANT_KEYS).any?
+      # changing only contact somehow change last_stage_change_at so we prevent it
       return if k.length == 1 && k.first == :last_stage_change_at
       note = IssueRevision.note(deal.creator_id, deal.updated_at, diff, options)
       issue.touch if IssueRevision.create_note(issue_id, note)
@@ -246,6 +244,16 @@ class Deal < ActiveRecord::Base
       return true if journal.notes == note
     end
     false
+  end
+
+  def self.update_issue_fields(issue, deal, resources)
+    Deal.update_custom_fields(issue, deal.id, deal.value)
+    issue.update_attributes(
+      assigned_to_id: Deal.assign_to(Deal.user_name(deal.owner_id, resources))
+    ) if deal.owner_id.present?
+    issue.update_attributes(
+      subject: deal.name.to_s
+    ) if deal.name.present?
   end
 
   def self.update_custom_fields(issue, deal_id, deal_value)
