@@ -125,7 +125,7 @@ class Deal < ActiveRecord::Base
 
     diff = IssueRevision.differences(deal, issue_id)
     if diff.any? && (k = diff.keys - REDUNDANT_KEYS).any?
-      # changing only contact somehow change last_stage_change_at so we prevent it
+      # changing only contact somehow change last_stage_change_at so we prevent updating whole issue
       return if k.length == 1 && k.first == :last_stage_change_at
       note = IssueRevision.note(deal.creator_id, deal.updated_at, diff, options)
       issue.touch if IssueRevision.create_note(issue_id, note)
@@ -198,7 +198,7 @@ class Deal < ActiveRecord::Base
     items << "Deal edited by: #{Deal.user_name(note.creator_id, resources)}"
     items << "Deal edited at: #{Time.parse(note.created_at).in_time_zone('Warsaw')}"
     items << 'Note was added to deal. Content:'
-    items << note.content
+    items << "<blockquote>#{note.content}</blockquote>"
 
     Setting.plugin_basecrm[:html_tags] ? items.join('<br />') : items.join("\r\n")
   end
