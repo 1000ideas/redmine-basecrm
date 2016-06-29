@@ -9,6 +9,7 @@ Redmine::Plugin.register :basecrm do
   settings default: { 'tracker_id' => Tracker.first.id,
                       'main_project_id' => Project.first.id,
                       'next_stage_project_id' => Project.first.id,
+                      'omit_project_id' => Project.first.id,
                       'category_id' => nil,
                       'html_tags' => true,
                       'base_token' => '',

@@ -28,6 +28,12 @@
         <%= select_tag "settings[category_id]", options_from_collection_for_select(categories_list, :id, :name, settings[:category_id]) %>
       </td>
     </tr>
+    <tr class="basecrm-omit-when">
+      <th><%= l(:omit_when) %></th>
+      <td>
+        <%= select_tag "settings[omit_project_id]", options_from_collection_for_select(projects_list, :id, :name, settings[:omit_project_id]) %>
+      </td>
+    </tr>
     <tr class="basecrm-html-tags">
       <th><%= l(:html_tags) %></th>
       <td>

@@ -137,6 +137,7 @@ class Deal < ActiveRecord::Base
     issue = Issue.find(issue_id)
     case stages[stage_id]
     when /Won|Wygrane/i
+      return if Setting.plugin_basecrm[:omit_project_id] == issue.project.id.to_s
       issue.update_attributes(
         category_id: Setting.plugin_basecrm[:category_id],
         project_id: Setting.plugin_basecrm[:next_stage_project_id]

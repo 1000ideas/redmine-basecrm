@@ -9,6 +9,7 @@ en:
   main_project: "After create move to project"
   move_to_project: "On next stage move to project"
   category: "On stage 'Won' move to category"
+  omit_when: "Omit updating project and category if in project"
   html_tags: "Description and comments HTML"
   base_token: "My BaseCRM's Token"
   device_uuid: "My device's UUID"

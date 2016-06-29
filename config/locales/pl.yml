@@ -8,6 +8,7 @@ pl:
   main_project: "Po utworzeniu przypisz do projektu"
   move_to_project: "Przy kolejnym etapie przenieś do projektu"
   category: "Przy etapie 'Wygrana' przenieś do kategorii"
+  omit_when: "Pomiń zmianę projektu i kategorii, gdy projekt to"
   html_tags: "Opisy i komentarze HTML"
   base_token: "Mój BaseCRM Token"
   device_uuid: "UUID mojego urządzenia"
